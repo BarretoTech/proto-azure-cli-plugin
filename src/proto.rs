@@ -46,11 +46,14 @@ pub fn native_install(
 ) -> FnResult<Json<NativeInstallOutput>> {
     let env = get_host_environment()?;
 
-    // macOS and Windows are served via `download_prebuilt` — short-circuit and
-    // let Proto fall through.
+    // macOS and Windows are served via `download_prebuilt`. Signal proto to
+    // skip the native path and fall through to the prebuilt archive logic.
+    // (`installed: false` without `skip_install: true` would be treated as a
+    // failed native install.)
     if env.os != HostOS::Linux {
         return Ok(Json(NativeInstallOutput {
             installed: false,
+            skip_install: true,
             ..NativeInstallOutput::default()
         }));
     }
