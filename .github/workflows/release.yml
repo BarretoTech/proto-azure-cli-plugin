@@ -1,0 +1,60 @@
+name: Release
+
+# Builds the WASM plugin and attaches it to the GitHub release whenever a
+# `vX.Y.Z` tag is pushed. The workflow also supports manual dispatch — useful
+# for re-attaching the artifact to an existing tag if the upload was missed.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build the WASM for (e.g. v0.1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and attach WASM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.ref }}" >> "$GITHUB_OUTPUT"
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.ref.outputs.ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release WASM
+        run: cargo build --target wasm32-wasip1 --release --locked
+
+      - name: Upload to GitHub release
+        # Creates the release if it does not exist yet and attaches the WASM.
+        # `fail_on_unmatched_files` catches the case where the build produced
+        # nothing at the expected path.
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ref.outputs.tag }}
+          files: target/wasm32-wasip1/release/azure_cli_plugin.wasm
+          fail_on_unmatched_files: true
