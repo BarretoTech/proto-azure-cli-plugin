@@ -19,7 +19,7 @@ Or with a pinned plugin version:
 
 ```toml
 [plugins]
-azure-cli = "github://BarretoTech/proto-azure-cli-plugin@v0.1.0"
+azure-cli = "github://BarretoTech/proto-azure-cli-plugin@v0.1.2"
 ```
 
 ## Usage
@@ -42,13 +42,39 @@ List available versions:
 proto versions azure-cli
 ```
 
-Pin a version in `.prototools`:
+### Pin a version
+
+Proto needs a version source to know which `az` to run. Pick whichever of the
+three patterns fits your workflow — any one is enough.
+
+**`proto pin`** — writes to the nearest `.prototools`:
 
 ```bash
-proto pin azure-cli 2.86.0
+proto pin azure-cli 2.86.0   # or: proto pin azure-cli latest
 ```
 
-After installation, the `az` command is available:
+**Edit `.prototools` directly** — the `latest` alias resolves to the highest
+released version every time proto reloads, so this is a good fit for projects
+that always want the newest:
+
+```toml
+azure-cli = "latest"           # or "2.86.0", "~2.86", "^2"
+```
+
+**`.tool-versions`** — asdf-compatible. Useful if you already maintain one for
+other tools:
+
+```
+azure-cli 2.86.0
+```
+
+Proto walks upward from the current directory looking for any of these, so
+project-local pins override user-global ones.
+
+### Run
+
+After installation and pinning, the `az` command is available on `PATH` via
+proto's shims:
 
 ```bash
 az --version

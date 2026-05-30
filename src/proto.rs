@@ -93,6 +93,44 @@ pub fn download_prebuilt(
     }))
 }
 
+/// Tool identifier used in `.tool-versions` files. Matches the proto plugin
+/// ID and the asdf convention (`asdf-azure-cli` uses the same name).
+const TOOL_VERSIONS_NAME: &str = "azure-cli";
+
+#[plugin_fn]
+pub fn detect_version_files(
+    Json(_): Json<DetectVersionInput>,
+) -> FnResult<Json<DetectVersionOutput>> {
+    Ok(Json(DetectVersionOutput {
+        // asdf-style .tool-versions file. proto walks upward from the cwd and
+        // reads any it finds; `parse_version_file` extracts the azure-cli line.
+        files: vec![".tool-versions".into()],
+        ..DetectVersionOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn parse_version_file(
+    Json(input): Json<ParseVersionFileInput>,
+) -> FnResult<Json<ParseVersionFileOutput>> {
+    // `.tool-versions` lines look like `azure-cli 2.86.0` (one tool per line,
+    // whitespace-separated). Comments start with `#`. The version may also be
+    // an alias like `latest`. We hand whatever appears verbatim to proto via
+    // `UnresolvedVersionSpec::parse`, which understands semver and aliases.
+    let version = input.content.lines().find_map(|line| {
+        let trimmed = line.split('#').next()?.trim();
+        let mut tokens = trimmed.split_whitespace();
+        let name = tokens.next()?;
+        if name != TOOL_VERSIONS_NAME {
+            return None;
+        }
+        let raw = tokens.next()?;
+        UnresolvedVersionSpec::parse(raw).ok()
+    });
+
+    Ok(Json(ParseVersionFileOutput { version }))
+}
+
 #[plugin_fn]
 pub fn locate_executables(
     Json(_): Json<LocateExecutablesInput>,
