@@ -1,0 +1,22 @@
+name: Enterprise ADRs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  adrs:
+    name: Enterprise ADRs
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Archgate
+        uses: archgate/setup-action@2e1631ad3551f8d044307b1114b414859b0a935f # v1.0.0
+        with:
+          version: v0.60.0
+      - name: Check enterprise ADRs
+        run: archgate check --strict
